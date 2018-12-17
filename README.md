@@ -1,2 +1,2 @@
 # CompTek
-Computer teknologi
+Computerteknologi
