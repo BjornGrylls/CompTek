@@ -23,7 +23,7 @@ $(document).ready(function() {
 
     document.getElementById("login").onclick = function() {
         if ($("#username").val().toLowerCase().indexOf(',') == -1 && $("#password").val().toLowerCase().indexOf(',') == -1) {
-            w.send(document.getElementById("username").value + "," + document.getElementById("password").value);
+            w.send($("#username").val() + "," + $("#password").val());
         } else {
             console.log("Fejl");
             $("#response").text("You can't have comma in username or password");

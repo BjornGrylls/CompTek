@@ -11,6 +11,7 @@ CREATE TABLE Users (
     last_modified DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-INSERT INTO Users (username, password) VALUES ('admin', 'admin')
+INSERT INTO Users (username, password) VALUES ('admin', 'admin');
 
 
+SELECT username FROM Users WHERE username = admin;
