@@ -1,12 +1,73 @@
-﻿
-using SuperWebSocket;
+﻿using SuperWebSocket;
 using System;
+using System.IO;
 
-namespace ConsoleApp1 {
+namespace CompTek {
     class Program {
-        private static WebSocketServer wsServer;
         static void Main(string[] args) {
+            Methods methods = new Methods();
+            LoginMethods loginMethods = new LoginMethods();
+            string input;
+
+            Console.WriteLine("Welcome to my login page made in collaboration with MadsBock \n");
+            Console.WriteLine("Please choose a login method: \n\n" +
+                "  1) local      2) MadsBock \n");
+
+            bool loggingIn = true;
+            while (loggingIn) {
+
+                input = Console.ReadLine();
+
+                switch (input.Trim().ToLower()) {
+                    case "1":
+                    case "local":
+                        loginMethods.LocalLogin();
+                        loggingIn = false;
+                        break;
+                    case "2":
+                    case "madsbock":
+                        loginMethods.MadsBockLogin();
+                        loggingIn = false;
+                        break;
+                    default:
+                        Console.WriteLine("Please write 1 or 2");
+                        break;
+                }
+            }
+
+
+        }
+
+    }
+
+    class LoginMethods {
+        Methods methods = new Methods();
+        private static WebSocketServer wsServer;
+
+        public void LocalLogin() {
+            Console.Write("\nUsername: ");
+            string username = Console.ReadLine();
+            Console.Write("Password: ");
+
+            string pass = "";
+            ConsoleKeyInfo key;
+
+            do {
+                key = Console.ReadKey(true);
+
+                if (key.Key != ConsoleKey.Backspace) {
+                    pass += key.KeyChar;
+                }
+            }
+            while (key.Key != ConsoleKey.Enter);
+
+        }
+
+        public void MadsBockLogin() {
+
             wsServer = new WebSocketServer();
+
+
             int port = 1337;
             wsServer.Setup(port);
             wsServer.NewSessionConnected += WsServer_NewSessionConnected;
@@ -14,28 +75,74 @@ namespace ConsoleApp1 {
             wsServer.NewDataReceived += WsServer_NewDataReceived;
             wsServer.SessionClosed += WsServer_SessionClosed;
             wsServer.Start();
-            Console.WriteLine("Server is running on port " + port + ". Press ENTER to exit....");
-            Console.ReadKey();
-        }
 
-        private static void WsServer_SessionClosed(WebSocketSession session, SuperSocket.SocketBase.CloseReason value) {
-            Console.WriteLine("SessionClosed");
-        }
+            string path = methods.GetParent(".\\", 4).ToString();
+            System.Diagnostics.Process.Start(path + "\\index.html");
 
-        private static void WsServer_NewDataReceived(WebSocketSession session, byte[] value) {
-            Console.WriteLine("NewDataReceived");
-        }
+            bool running = true;
+            while (running) {
+                string input = Console.ReadLine();
 
-        private static void WsServer_NewMessageReceived(WebSocketSession session, string value) {
-            Console.WriteLine("NewMessageReceived: " + value);
-            if (value == "Hello server") {
-                session.Send("Hello client");
+                switch (input) {
+                    case "exit":
+                        wsServer.Stop();
+                        running = false;
+                        break;
+                    default:
+                        //wsServer.Send();
+                        break;
+                }
+
             }
         }
 
-        private static void WsServer_NewSessionConnected(WebSocketSession session) {
-            Console.WriteLine("NewSessionConnected");
+
+        private static void WsServer_SessionClosed(WebSocketSession session, SuperSocket.SocketBase.CloseReason value) {
+            //Console.WriteLine("SessionClosed");
         }
+
+        private static void WsServer_NewDataReceived(WebSocketSession session, byte[] value) {
+            //Console.WriteLine("NewDataReceived");
+        }
+
+        private static void WsServer_NewMessageReceived(WebSocketSession session, string value) {
+            Methods methods = new Methods();
+            string[] splittet = value.Split(',');
+            methods.SQLLogin(splittet[0], splittet[1]);
+
+            /*Console.WriteLine("Webpage> " + value);
+            if (value == "b,b") {
+                session.Send("Luk");
+            }*/
+        }
+
+        private static void WsServer_NewSessionConnected(WebSocketSession session) {
+            //Console.WriteLine("NewSessionConnected");
+        }
+    }
+}
+
+class Methods {
+
+    /// <summary>
+    /// Gets the parent of the directory repeatedly "times" times
+    /// </summary>
+    /// <param name="directory">The start directory</param>
+    /// <param name="times">Amount of parent folders you go up</param>
+    public string GetParent(string directory, int times) {
+        for (int i = 0; i < times; i++) {
+            directory = Directory.GetParent(directory).ToString();
+        }
+        return directory;
+    }
+
+    public void SQLLogin(string username, string password) {
+        Console.WriteLine(username + password);
+    }
+
+    public void FinalPage(string username) {
+        Console.WriteLine("Welcome " + username);
+        Console.WriteLine("You can exit by pressing ALT+F4");
     }
 }
 
