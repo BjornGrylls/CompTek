@@ -15,7 +15,7 @@ $(document).ready(function() {
     }
     w.onclose = function(e) {
         console.log("closed");
-        //close();
+        close();
     }
     w.onerror = function(e) {
         //console.log("error");

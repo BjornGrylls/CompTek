@@ -7,20 +7,170 @@ using System.Diagnostics;
 namespace CompTek {
     class Program {
         static void Main(string[] args) {
-            Methods methods = new Methods();
-            LoginMethods loginMethods = new LoginMethods();
+            SignInUp signInUp = new SignInUp();
             string input;
+            bool choosing = true;
 
-            Console.WriteLine("Welcome to my login page made in collaboration with MadsBock \n");
-            Console.WriteLine("Please choose a login method: \n\n" +
-                "  1) local      2) MadsBock \n");
+            Console.WriteLine("Welcome to my login page made in collaboration with MadsBock");
+
+            bool running = true;
+            while (running) { // Not gonna end
+                Console.WriteLine("\n\nDo you want to 'sign in' or 'sign up' \n\n" +
+                              "  1) sign in      2) sign up");
+
+                choosing = true;
+                while (choosing) {
+
+                    input = Console.ReadLine();
+                    input = input ?? "";
+
+                    switch (input.Trim().ToLower()) {
+                        case "1":
+                        case "sign in":
+                            signInUp.SignIn();
+                            choosing = false;
+                            break;
+                        case "2":
+                        case "sign up":
+                            signInUp.SignUp();
+                            choosing = false;
+                            break;
+                        default:
+                            Console.WriteLine("Please write 1 or 2");
+                            break;
+                    }
+
+                }
+            } // While running end
+            
+
+
+        } // Main end
+
+    }
+
+    class LoginMethods {
+        SQLMethods SQLMethod = new SQLMethods();
+        Methods methods = new Methods();
+        private static WebSocketServer wsServer;
+
+        public void LocalLogin() {
+            bool loggingIn = true;
+            while (loggingIn) {
+                Console.Write("\nUsername: ");
+                string username = Console.ReadLine();
+                Console.Write("Password: ");
+
+                string pass = "";
+                ConsoleKeyInfo key;
+
+                do {
+                    key = Console.ReadKey(true);
+
+                    if (key.Key != ConsoleKey.Backspace && key.Key != ConsoleKey.Enter) {
+                        pass += key.KeyChar;
+                    }
+                }
+                while (key.Key != ConsoleKey.Enter);
+                Console.WriteLine();
+
+                if (username != "" && pass != "") { // Cannot be empty
+                    if (SQLMethod.SQLLogin(username, pass)) {
+                        loggingIn = false;
+                        methods.FinalPage(username);
+                    } else {
+                        Console.WriteLine("Wrong username or password. Press enter to try again or ESC to go back to login page");
+                        key = Console.ReadKey();
+
+                        // Remove Esc character
+                        Console.SetCursorPosition(0, Console.CursorTop);
+                        Console.WriteLine(" ");
+
+                        loggingIn = key.Key != ConsoleKey.Escape;
+                    }
+                } else {
+                    Console.WriteLine("Username or password can't be empty");
+                }
+            }
+
+        } // LocalLogin end
+
+        private bool waiting = true;
+
+        public void MadsBockLogin() {
+            wsServer = new WebSocketServer();
+
+
+            int port = 1337;
+            wsServer.Setup(port);
+            wsServer.NewSessionConnected += WsServer_NewSessionConnected;
+            wsServer.NewMessageReceived += WsServer_NewMessageReceived;
+            wsServer.NewDataReceived += WsServer_NewDataReceived;
+            wsServer.SessionClosed += WsServer_SessionClosed;
+            wsServer.Start();
+
+            string path = methods.GetParent(".\\", 4).ToString();
+            Process.Start(path + "\\index.html");
+            Console.WriteLine("Waiting for response from MadsBock... \n" +
+                              "Type 'stop' to go back to login page");
+
+            string input;
+            while (waiting) {
+                input = Console.ReadLine();
+                input = input ?? "";
+
+                switch (input.Trim().ToLower()) {
+                    case "stop":
+                        wsServer.Stop();
+                        waiting = false;
+                        break;
+                    default:
+                        break;
+                }
+
+            }
+        } // MadsBockLogin end
+
+
+        private static void WsServer_SessionClosed(WebSocketSession session, SuperSocket.SocketBase.CloseReason value) {
+            //Console.WriteLine("SessionClosed");
+        }
+
+        private static void WsServer_NewDataReceived(WebSocketSession session, byte[] value) {
+            //Console.WriteLine("NewDataReceived");
+        }
+
+        private void WsServer_NewMessageReceived(WebSocketSession session, string value) {
+            Methods method = new Methods();
+            SQLMethods SQLMethod = new SQLMethods();
+            string[] splittet = value.Split(',');
+            if (SQLMethod.SQLLogin(splittet[0], splittet[1])) {
+                session.Send("Luk");
+                waiting = false;
+                method.FinalPage(splittet[0]);
+            } else {
+                
+            }
+        }
+
+        private static void WsServer_NewSessionConnected(WebSocketSession session) {
+            //Console.WriteLine("NewSessionConnected");
+        }
+    }
+
+    class SignInUp {
+        private string input;
+        LoginMethods loginMethods = new LoginMethods();
+
+        public void SignIn() {
+            Console.WriteLine("\nPlease choose a login method: \n\n" +
+                              "  1) local      2) MadsBock");
 
             bool loggingIn = true;
             while (loggingIn) {
 
                 input = Console.ReadLine();
-
-                input = (input ?? "");
+                input = input ?? "";
 
                 switch (input.Trim().ToLower()) {
                     case "1":
@@ -37,100 +187,26 @@ namespace CompTek {
                         Console.WriteLine("Please write 1 or 2");
                         break;
                 }
-            }
-
-
-        }
-
-    }
-
-    class LoginMethods {
-        Methods methods = new Methods();
-        private static WebSocketServer wsServer;
-
-        public void LocalLogin() {
-            Console.Write("\nUsername: ");
-            string username = Console.ReadLine();
-            Console.Write("Password: ");
-
-            string pass = "";
-            ConsoleKeyInfo key;
-
-            do {
-                key = Console.ReadKey(true);
-
-                if (key.Key != ConsoleKey.Backspace && key.Key != ConsoleKey.Enter) {
-                    pass += key.KeyChar;
-                }
-            }
-            while (key.Key != ConsoleKey.Enter);
-            Console.WriteLine();
-            if (methods.SQLLogin(username, pass)) {
-                methods.FinalPage(username);
-            } else {
 
             }
 
         }
 
-        public void MadsBockLogin() {
+        public void SignUp() {
+            SQLMethods SQLMethod = new SQLMethods();
+            string username;
+            string password;
+            Console.WriteLine("\nWrite a username\n");
+            username = Console.ReadLine();
+            username = username ?? "";
 
-            wsServer = new WebSocketServer();
+            Console.WriteLine("\nWrite a password\n");
+            password = Console.ReadLine();
+            password = password ?? "";
 
-
-            int port = 1337;
-            wsServer.Setup(port);
-            wsServer.NewSessionConnected += WsServer_NewSessionConnected;
-            wsServer.NewMessageReceived += WsServer_NewMessageReceived;
-            wsServer.NewDataReceived += WsServer_NewDataReceived;
-            wsServer.SessionClosed += WsServer_SessionClosed;
-            wsServer.Start();
-
-            string path = methods.GetParent(".\\", 4).ToString();
-            Process.Start(path + "\\index.html");
-
-            bool running = true;
-            while (running) {
-                string input = Console.ReadLine();
-
-                switch (input) {
-                    case "exit":
-                        wsServer.Stop();
-                        running = false;
-                        break;
-                    default:
-                        //wsServer.Send();
-                        break;
-                }
-
-            }
-        }
-
-
-        private static void WsServer_SessionClosed(WebSocketSession session, SuperSocket.SocketBase.CloseReason value) {
-            //Console.WriteLine("SessionClosed");
-        }
-
-        private static void WsServer_NewDataReceived(WebSocketSession session, byte[] value) {
-            //Console.WriteLine("NewDataReceived");
-        }
-
-        private static void WsServer_NewMessageReceived(WebSocketSession session, string value) {
-            Methods methods = new Methods();
-            string[] splittet = value.Split(',');
-            methods.SQLLogin(splittet[0], splittet[1]);
-
-            /*Console.WriteLine("Webpage> " + value);
-            if (value == "b,b") {
-                session.Send("Luk");
-            }*/
-        }
-
-        private static void WsServer_NewSessionConnected(WebSocketSession session) {
-            //Console.WriteLine("NewSessionConnected");
+            SQLMethod.AddSQLUser(username, password);
         }
     }
-
 
     class Methods {
 
@@ -145,48 +221,122 @@ namespace CompTek {
             }
             return directory;
         }
+
+        // Here the program would continue logged in
+        public void FinalPage(string username) {
+            Console.WriteLine("\nWelcome to the club " + username);
+            Console.WriteLine("You can log out by typing 'log out'");
+            bool programCanContinue = true;
+            while (programCanContinue) {
+                if ("log out" == Console.ReadLine().ToLower()) {
+                    programCanContinue = false;
+                }
+            }
+        }
+    }
+
+    class SQLMethods {
+
         /// <summary>
         /// Asks MySQL server for users and return true if chosen user is found
         /// </summary>
         /// <param name="username">Username of user</param>
         /// <param name="password">Password of user</param>
         public bool SQLLogin(string username, string password) {
-            MySqlConnection connection;
-            string server = "localhost";
-            string database = "comptekbase";
-            string uid = "test";
-            string passwordSQL = "tester";
-            string port = "3307";
-            string connectionString = "SERVER=" + server + ";" + "DATABASE=" + database + ";" + "UID=" + uid + ";" + "PASSWORD=" + passwordSQL + ";" + "PORT=" + port + ";";
+            if (username != "" && password != "") { // Cannot be empty
+                MySqlConnection connection;
+                string server = "localhost";
+                string database = "comptekbase";
+                string uid = "test";
+                string passwordSQL = "tester";
+                string port = "3307";
+                string connectionString = "SERVER=" + server + ";" + "DATABASE=" + database + ";" + "UID=" + uid + ";" + "PASSWORD=" + passwordSQL + ";" + "PORT=" + port + ";";
 
-            connection = new MySqlConnection(connectionString);
-            connection.Open();
-            string query = @"SELECT username FROM Users WHERE username = '" + username + @"' AND password = '" + password + "';";
-            string result = "";
-            if (connection.State.ToString() == "Open") {
-                MySqlCommand cmd = new MySqlCommand(query, connection);
-                MySqlDataReader dataReader = cmd.ExecuteReader();
+                connection = new MySqlConnection(connectionString);
+                connection.Open();
+                string query = @"SELECT username FROM Users WHERE username = '" + username + @"' AND password = '" + password + "';";
+                string result = "";
+                if (connection.State.ToString() == "Open") {
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    MySqlDataReader dataReader = cmd.ExecuteReader();
 
-                while (dataReader.Read()) {
-                    result = dataReader["username"].ToString();
+                    while (dataReader.Read()) {
+                        result = dataReader["username"].ToString();
+                    }
+
+                    // Closes connections
+                    dataReader.Close();
+                    connection.Close();
                 }
 
-                dataReader.Close();
-
-                connection.Close();
+                return result == username;
+            } else {
+                Console.WriteLine("Username or password can't be empty");
+                return false;
             }
 
-            return (result == username ? true : false);
         }
 
-        public void FinalPage(string username) {
-            Console.WriteLine("Welcome to the club " + username);
-            Console.WriteLine("You can exit by pressing Enter");
-            Console.Read();
+        /// <summary>
+        /// Adds a user to MySQL database.
+        /// </summary>
+        /// <param name="username">Username of user</param>
+        /// <param name="password">Password of user</param>
+        public bool AddSQLUser(string username, string password) {
+            if (username != "" && password != "") { // Cannot be empty
+                MySqlConnection connection;
+                string server = "localhost";
+                string database = "comptekbase";
+                string uid = "test";
+                string passwordSQL = "tester";
+                string port = "3307";
+                string connectionString = "SERVER=" + server + ";" + "DATABASE=" + database + ";" + "UID=" + uid + ";" + "PASSWORD=" + passwordSQL + ";" + "PORT=" + port + ";";
+
+                connection = new MySqlConnection(connectionString);
+                connection.Open();
+                string query = @"SELECT username FROM Users WHERE username = '" + username + @"';";
+                string result = "";
+                if (connection.State.ToString() == "Open") {
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    MySqlDataReader dataReader = cmd.ExecuteReader();
+
+                    while (dataReader.Read()) {
+                        result = dataReader["username"].ToString();
+                    }
+
+                    dataReader.Close();
+
+                    if (result != username) {
+                        query = @"INSERT INTO Users (username, password) VALUES ('" + username + "', '" + password + "');";
+                        cmd = new MySqlCommand(query, connection);
+                        cmd.ExecuteNonQuery();
+                        // Closes connection
+                        connection.Close();
+                        return true;
+                    } else {
+                        Console.WriteLine("Username taken");
+                        // Closes connection
+                        connection.Close();
+                    }
+
+
+
+                } else {
+                    // Closes connection
+                    connection.Close();
+                }
+
+
+            } else {
+                Console.WriteLine("Username or password can't be empty");
+            }
+            return false;
         }
     }
+    // INSERT INTO Users (username, password) VALUES ('admin', 'admin');
 
 
+    /*
     class DBConnect {
         private MySqlConnection connection;
         private string server;
@@ -416,5 +566,5 @@ namespace CompTek {
                 Console.WriteLine("Error , unable to Restore!");
             }
         }
-    }
+    }*/
 }
